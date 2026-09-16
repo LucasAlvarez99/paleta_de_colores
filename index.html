@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Coloría | Explorador de color</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --ink: #182230;
+      --muted: #6d7888;
+      --line: #e5e9ef;
+      --paper: #f5f7fb;
+      --white: #ffffff;
+      --accent: #ff5b45;
+      --accent-soft: #fff0ed;
+      --shadow: 0 20px 55px rgba(35, 46, 66, 0.10);
+      --preview-ink: #182230;
+      --mono: 'DM Mono', Consolas, monospace;
+      --sans: 'Manrope', 'Segoe UI', sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      transition: background .25s ease, color .25s ease;
+    }
+    body.dark { --ink: #f1f4f8; --muted: #9ba8b8; --line: #2d3948; --paper: #121923; --white: #1b2532; --accent-soft: #3a2728; --shadow: 0 20px 55px rgba(0, 0, 0, .22); }
+    body.dark .search, body.dark .preview-sample, body.dark .button-ghost, body.dark select, body.dark .color-input { background: #202c3b; color: var(--ink); }
+    body.dark .swatch, body.dark .hero-badge { background: var(--white); }
+    body.dark .remove { background: #2b3746; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell { width: min(1440px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar {
+      height: 84px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -0.04em; font-size: 20px; }
+    .brand-mark { display: grid; grid-template-columns: repeat(2, 10px); gap: 3px; transform: rotate(-12deg); }
+    .brand-mark i { display: block; width: 10px; height: 10px; border-radius: 3px; }
+    .brand-mark i:nth-child(1) { background: #ff5b45; }
+    .brand-mark i:nth-child(2) { background: #ffc857; }
+    .brand-mark i:nth-child(3) { background: #22b8a7; }
+    .brand-mark i:nth-child(4) { background: #5f6fff; }
+    .top-meta { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .icon-button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--ink); }
+    .icon-button:hover { border-color: var(--accent); color: var(--accent); }
+
+    .hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 32px; padding: 66px 0 38px; }
+    .eyebrow { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 14px; }
+    h1 { max-width: 680px; margin: 0; font-size: clamp(42px, 6vw, 80px); line-height: .98; letter-spacing: -.075em; }
+    .hero-copy { max-width: 540px; margin: 22px 0 0; color: var(--muted); font-size: 16px; line-height: 1.7; }
+    .hero-badge { align-self: start; display: flex; align-items: center; gap: 9px; padding: 11px 15px; background: var(--white); border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; font-weight: 700; box-shadow: 0 8px 26px rgba(35, 46, 66, .05); }
+    .pulse { width: 8px; height: 8px; background: #22b8a7; border-radius: 50%; box-shadow: 0 0 0 5px rgba(34, 184, 167, .13); animation: pulse 2s infinite; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(34, 184, 167, 0); } }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; align-items: start; padding-bottom: 70px; }
+    .panel { background: var(--white); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+    .palette-panel { min-width: 0; overflow: hidden; }
+    .toolbar { display: flex; align-items: center; gap: 14px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+    .search-wrap { position: relative; flex: 1; }
+    .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8993a1; pointer-events: none; }
+    .search { width: 100%; padding: 12px 14px 12px 42px; background: #f8f9fb; border: 1px solid transparent; border-radius: 10px; color: var(--ink); outline: none; transition: .2s; }
+    .search:focus { background: #fff; border-color: #cfd6e0; box-shadow: 0 0 0 4px #f0f2f6; }
+    .filter { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    select { padding: 11px 30px 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); outline: none; }
+    .palette-head { display: flex; justify-content: space-between; align-items: center; padding: 27px 24px 21px; }
+    .palette-title { margin: 0; font-size: 17px; letter-spacing: -.03em; }
+    .palette-note { margin: 0; color: var(--muted); font-size: 12px; }
+    .palette-grid { display: grid; grid-template-columns: repeat(6, minmax(90px, 1fr)); gap: 12px; padding: 0 24px 26px; }
+    .swatch { min-width: 0; padding: 0; border: 1px solid rgba(20, 28, 40, .10); border-radius: 13px; overflow: hidden; background: #fff; text-align: left; transition: transform .18s ease, box-shadow .18s ease; animation: rise .45s both; }
+    .swatch:hover { transform: translateY(-4px); box-shadow: 0 13px 24px rgba(35, 46, 66, .15); }
+    .swatch.selected { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .swatch-color { position: relative; display: block; aspect-ratio: 1.15 / 1; }
+    .swatch-check { position: absolute; right: 8px; top: 8px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; color: var(--accent); opacity: 0; transform: scale(.6); transition: .2s; }
+    .swatch.selected .swatch-check { opacity: 1; transform: scale(1); }
+    .swatch-info { padding: 10px 11px 11px; }
+    .swatch-name { display: block; overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 800; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+    .swatch-code { display: block; margin-top: 4px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .side-column { display: grid; gap: 18px; position: sticky; top: 20px; }
+    .selection-panel { padding: 24px; }
+    .side-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .side-title { margin: 0; font-size: 16px; letter-spacing: -.03em; }
+    .counter { color: var(--accent); font-family: var(--mono); font-size: 12px; font-weight: 500; }
+    .side-description { margin: 0 0 20px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .selected-list { display: grid; gap: 10px; min-height: 170px; }
+    .preview { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .preview-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .preview-count { color: var(--ink); font-family: var(--mono); font-weight: 500; letter-spacing: 0; }
+    .preview-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; height: 76px; overflow: hidden; border-radius: 10px; background: #edf0f4; }
+    .preview-strip span { min-width: 0; transition: background .3s ease; }
+    .preview-strip span:first-child { border-radius: 10px 0 0 10px; }
+    .preview-strip span:last-child { border-radius: 0 10px 10px 0; }
+    .preview-sample { margin-top: 8px; overflow: hidden; border-radius: 10px; background: #f4f6f9; transition: background .3s ease; }
+    .preview-nav { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px; color: var(--preview-ink); font-size: 10px; font-weight: 800; }
+    .preview-nav span { display: flex; align-items: center; gap: 4px; }
+    .preview-nav i { width: 6px; height: 6px; border-radius: 50%; background: var(--preview-accent, var(--ink)); }
+    .preview-copy { padding: 10px 11px 12px; background: rgba(255,255,255,.62); }
+    .preview-copy strong { display: block; color: var(--preview-ink); font-size: 12px; }
+    .preview-copy small { display: block; margin-top: 3px; color: #5f6d7e; font-size: 9px; }
+    .preview-action { padding: 7px 9px; border: 0; border-radius: 6px; background: var(--preview-accent, var(--ink)); color: #fff; font-size: 10px; font-weight: 800; transition: background .3s ease; }
+    .tool-panel { padding: 20px 24px; }
+    .tool-panel h3 { margin: 0 0 5px; font-size: 14px; }
+    .tool-panel p { margin: 0 0 13px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .tool-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .tool-row select { min-width: 0; width: 100%; padding: 9px 8px; font-size: 11px; }
+    .tool-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tool-button { padding: 9px 7px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font-size: 10px; font-weight: 800; }
+    .tool-button:hover { border-color: var(--accent); color: var(--accent); }
+    .contrast { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .contrast strong { color: var(--ink); font-family: var(--mono); font-size: 10px; }
+    .favorite { color: #f1a928; }
+    .selected-item { display: flex; align-items: center; gap: 11px; padding: 10px; border: 1px solid var(--line); border-radius: 11px; animation: slide .25s both; }
+    .selected-dot { width: 36px; height: 36px; border-radius: 8px; flex: 0 0 auto; }
+    .selected-details { min-width: 0; flex: 1; }
+    .selected-name { display: block; overflow: hidden; font-size: 12px; font-weight: 800; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+    .selected-value { display: block; margin-top: 3px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+    .remove { display: grid; place-items: center; width: 25px; height: 25px; border: 0; border-radius: 50%; background: #f3f5f8; color: var(--muted); }
+    .remove:hover { background: var(--accent-soft); color: var(--accent); }
+    .empty { display: grid; place-items: center; padding: 20px 15px; border: 1px dashed #cdd4de; border-radius: 11px; color: #9da6b3; font-size: 12px; text-align: center; line-height: 1.5; }
+    @keyframes slide { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
+    .actions { display: flex; gap: 9px; margin-top: 20px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 14px; border-radius: 9px; font-size: 12px; font-weight: 800; transition: .2s; }
+    .button-primary { flex: 1; border: 1px solid var(--accent); background: var(--accent); color: #fff; box-shadow: 0 8px 15px rgba(255, 91, 69, .2); }
+    .button-primary:hover { background: #ed4d38; transform: translateY(-1px); }
+    .button-ghost { border: 1px solid var(--line); background: #fff; color: var(--muted); }
+    .button-ghost:hover { border-color: #c5ccd7; color: var(--ink); }
+    .custom-panel { padding: 22px 24px; }
+    .custom-panel h3 { margin: 0 0 5px; font-size: 14px; }
+    .custom-panel p { margin: 0 0 16px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .custom-row { display: flex; gap: 9px; }
+    .color-input { width: 46px; height: 40px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .hex-input { min-width: 0; flex: 1; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-family: var(--mono); font-size: 11px; text-transform: uppercase; outline: none; }
+    .hex-input:focus { border-color: var(--accent); }
+    .add-button { width: 40px; border: 0; border-radius: 8px; background: var(--ink); color: white; font-size: 18px; }
+    .add-button:hover { background: #2d3b4d; }
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 3; padding: 12px 17px; border-radius: 9px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; box-shadow: 0 13px 30px rgba(25, 34, 46, .25); opacity: 0; pointer-events: none; transform: translate(-50%, 12px); transition: .25s; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .no-results { grid-column: 1 / -1; padding: 55px 20px; color: var(--muted); text-align: center; font-size: 13px; }
+    .no-results strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 15px; }
+
+    @media (max-width: 1100px) {
+      .palette-grid { grid-template-columns: repeat(5, minmax(90px, 1fr)); }
+    }
+    @media (max-width: 850px) {
+      .hero { grid-template-columns: 1fr; padding-top: 48px; }
+      .hero-badge { justify-self: start; }
+      .workspace { grid-template-columns: 1fr; }
+      .side-column { position: static; grid-template-columns: 1fr 1fr; }
+      .selection-panel { grid-row: span 2; }
+    }
+    @media (max-width: 600px) {
+      .shell { width: min(100% - 28px, 1440px); }
+      .topbar { height: 68px; }
+      .top-meta { display: none; }
+      h1 { font-size: 49px; }
+      .hero-copy { font-size: 14px; }
+      .toolbar { align-items: stretch; flex-direction: column; padding: 16px; }
+      .filter { justify-content: space-between; }
+      .palette-head { align-items: flex-start; flex-direction: column; gap: 5px; padding: 21px 16px 17px; }
+      .palette-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 0 16px 18px; }
+      .side-column { grid-template-columns: 1fr; }
+      .selection-panel { grid-row: auto; }
+      .custom-panel { padding: 20px; }
+      .tool-panel { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="shell topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span> coloría</div>
+    <div class="top-actions"><div class="top-meta">biblioteca cromática · v1.0</div><button id="themeButton" class="icon-button" type="button" aria-label="Cambiar tema">◐</button></div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Encuentra tu combinación</div>
+        <h1>El color que tu proyecto estaba buscando.</h1>
+        <p class="hero-copy">Explora matices, encuentra contrastes y llévate hasta tres colores listos para usar. Haz clic en cualquier muestra para construir tu paleta.</p>
+      </div>
+      <div class="hero-badge"><span class="pulse"></span> 324 colores disponibles</div>
+    </section>
+
+    <section class="workspace">
+      <div class="panel palette-panel">
+        <div class="toolbar">
+          <label class="search-wrap">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+            <input id="search" class="search" type="search" placeholder="Busca un color o código HEX..." autocomplete="off">
+          </label>
+          <label class="filter">Mostrar <select id="familyFilter"><option value="all">Todos los colores</option><option value="warm">Cálidos</option><option value="cool">Fríos</option><option value="neutral">Neutros</option></select></label>
+        </div>
+        <div class="palette-head"><h2 class="palette-title">Espectro completo</h2><p class="palette-note" id="resultCount">324 muestras · haz clic para seleccionar</p></div>
+        <div id="paletteGrid" class="palette-grid" aria-live="polite"></div>
+      </div>
+
+      <aside class="side-column">
+        <div class="panel selection-panel">
+          <div class="side-heading"><h2 class="side-title">Tu selección</h2><span class="counter" id="counter">0 / 3</span></div>
+          <p class="side-description">Elige hasta tres colores para crear una combinación equilibrada.</p>
+          <div id="selectedList" class="selected-list"></div>
+          <div class="preview" aria-label="Preview de tu paleta">
+            <div class="preview-label"><span>Preview</span><span id="previewCount" class="preview-count">sin colores</span></div>
+            <div id="previewStrip" class="preview-strip"><span></span><span></span><span></span></div>
+            <div id="previewSample" class="preview-sample"><div class="preview-nav"><span><i></i> coloría</span><button id="previewAction" class="preview-action" type="button">Acción</button></div><div class="preview-copy"><strong>Diseña con intención</strong><small>Una muestra rápida de tu combinación.</small></div></div>
+          </div>
+          <div class="actions"><button id="copyButton" class="button button-primary" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar códigos</button><button id="clearButton" class="button button-ghost" type="button" aria-label="Limpiar selección">Limpiar</button></div>
+        </div>
+        <div class="panel custom-panel">
+          <h3>¿Tienes un color en mente?</h3>
+          <p>Añade cualquier código hexadecimal a tu selección.</p>
+          <div class="custom-row"><input id="colorInput" class="color-input" type="color" value="#ff5b45" aria-label="Selector de color"><input id="hexInput" class="hex-input" type="text" value="#FF5B45" maxlength="7" aria-label="Código hexadecimal"><button id="addButton" class="add-button" type="button" aria-label="Añadir color">+</button></div>
+        </div>
+        <div class="panel tool-panel">
+          <h3>Herramientas de paleta</h3>
+          <p>Genera combinaciones y exporta tus colores.</p>
+          <div class="tool-row"><select id="harmonySelect" aria-label="Tipo de armonía"><option value="complementary">Complementaria</option><option value="analogous">Análoga</option><option value="triadic">Triádica</option><option value="monochrome">Monocromática</option></select><select id="formatSelect" aria-label="Formato de copia"><option value="hex">HEX</option><option value="rgb">RGB</option><option value="hsl">HSL</option><option value="css">Variables CSS</option></select></div>
+          <div class="tool-buttons"><button id="generateButton" class="tool-button" type="button">Generar armonía</button><button id="favoriteButton" class="tool-button" type="button">☆ Guardar</button><button id="copyFormatButton" class="tool-button" type="button">Copiar formato</button><button id="downloadButton" class="tool-button" type="button">Descargar CSS</button></div>
+          <div class="contrast"><span>Contraste recomendado</span><strong id="contrastValue">--</strong></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script>
+    const paletteGrid = document.getElementById('paletteGrid');
+    const selectedList = document.getElementById('selectedList');
+    const searchInput = document.getElementById('search');
+    const familyFilter = document.getElementById('familyFilter');
+    const resultCount = document.getElementById('resultCount');
+    const counter = document.getElementById('counter');
+    const previewCount = document.getElementById('previewCount');
+    const previewStrip = document.getElementById('previewStrip');
+    const previewSample = document.getElementById('previewSample');
+    const previewAction = document.getElementById('previewAction');
+    const contrastValue = document.getElementById('contrastValue');
+    const formatSelect = document.getElementById('formatSelect');
+    const harmonySelect = document.getElementById('harmonySelect');
+    const toast = document.getElementById('toast');
+    const colorInput = document.getElementById('colorInput');
+    const hexInput = document.getElementById('hexInput');
+    let selected = JSON.parse(localStorage.getItem('coloria-selection') || '[]');
+    let favorites = JSON.parse(localStorage.getItem('coloria-favorites') || '[]');
+    let toastTimer;
+
+    const names = {
+      0: 'Rojo', 15: 'Coral', 30: 'Naranja', 45: 'Ámbar', 60: 'Amarillo', 75: 'Lima',
+      90: 'Verde hoja', 105: 'Esmeralda', 120: 'Verde', 135: 'Jade', 150: 'Turquesa', 165: 'Aguamarina',
+      180: 'Cian', 195: 'Azul cielo', 210: 'Azul', 225: 'Índigo', 240: 'Violeta', 255: 'Púrpura',
+      270: 'Magenta', 285: 'Fucsia', 300: 'Rosa', 315: 'Frambuesa', 330: 'Carmín', 345: 'Borgoña'
+    };
+
+    function makePalette() {
+      const colors = [];
+      const hues = Array.from({ length: 36 }, (_, index) => index * 10);
+      const lightness = [24, 32, 40, 48, 56, 64, 72, 82, 92];
+      hues.forEach((hue) => lightness.forEach((light, shadeIndex) => {
+        const saturation = light >= 82 ? 70 : 76;
+        const hex = hslToHex(hue, saturation, light);
+        const nameHue = (Math.round(hue / 15) * 15) % 360;
+        colors.push({ hex, hue, light, family: getFamily(hue, light), name: `${names[nameHue]} ${shadeIndex + 1}` });
+      }));
+      return colors;
+    }
+
+    function getFamily(hue, light) {
+      if (light >= 84) return 'neutral';
+      if (hue < 75 || hue >= 330) return 'warm';
+      return 'cool';
+    }
+
+    function hslToHex(h, s, l) {
+      s /= 100; l /= 100;
+      const k = (n) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return `#${[f(0), f(8), f(4)].map((value) => Math.round(255 * value).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+    }
+
+    function hexToRgb(hex) {
+      const value = hex.slice(1);
+      return { r: parseInt(value.slice(0, 2), 16), g: parseInt(value.slice(2, 4), 16), b: parseInt(value.slice(4, 6), 16) };
+    }
+
+    function hexToHsl(hex) {
+      const { r, g, b } = hexToRgb(hex);
+      const values = [r, g, b].map((value) => value / 255);
+      const max = Math.max(...values); const min = Math.min(...values); const delta = max - min;
+      let h = 0; const l = (max + min) / 2; let s = 0;
+      if (delta) { s = delta / (1 - Math.abs(2 * l - 1)); if (max === values[0]) h = 60 * (((values[1] - values[2]) / delta) % 6); else if (max === values[1]) h = 60 * ((values[2] - values[0]) / delta + 2); else h = 60 * ((values[0] - values[1]) / delta + 4); }
+      return { h: Math.round((h + 360) % 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    }
+
+    function contrastRatio(first, second) {
+      const luminance = (hex) => Object.values(hexToRgb(hex)).map((value) => value / 255).map((value) => value <= .03928 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+      const light = luminance(first); const dark = luminance(second);
+      return ((Math.max(light, dark) + .05) / (Math.min(light, dark) + .05)).toFixed(1);
+    }
+
+    const palette = makePalette();
+
+    function renderPalette() {
+      const query = searchInput.value.trim().toLowerCase();
+      const family = familyFilter.value;
+      const matches = palette.filter((color) => {
+        const textMatch = !query || color.name.toLowerCase().includes(query) || color.hex.toLowerCase().includes(query);
+        return textMatch && (family === 'all' || color.family === family);
+      });
+      paletteGrid.innerHTML = matches.length ? matches.map((color, index) => `
+        <button class="swatch ${selected.includes(color.hex) ? 'selected' : ''}" style="animation-delay: ${Math.min(index, 20) * 18}ms" data-hex="${color.hex}" type="button" aria-label="Seleccionar ${color.name}, ${color.hex}">
+          <span class="swatch-color" style="background:${color.hex}"><span class="swatch-check">✓</span></span>
+          <span class="swatch-info"><span class="swatch-name">${color.name}</span><span class="swatch-code">${color.hex}</span></span>
+        </button>`).join('') : '<div class="no-results"><strong>No encontramos ese color</strong>Prueba con otro nombre o código HEX.</div>';
+      resultCount.textContent = `${matches.length} muestras · haz clic para seleccionar`;
+    }
+
+    function renderSelected() {
+      counter.textContent = `${selected.length} / 3`;
+      selectedList.innerHTML = selected.length ? selected.map((hex, index) => {
+        const color = palette.find((item) => item.hex === hex) || { name: 'Color personalizado' };
+        return `<div class="selected-item" style="animation-delay: ${index * 45}ms"><span class="selected-dot" style="background:${hex}"></span><span class="selected-details"><span class="selected-name">${color.name}</span><span class="selected-value">${hex}</span></span><button class="remove" data-remove="${hex}" type="button" aria-label="Quitar ${hex}">×</button></div>`;
+      }).join('') : '<div class="empty">Tu selección aparecerá aquí.<br>Elige hasta tres muestras.</div>';
+      const previewColors = [...selected, ...Array(3 - selected.length).fill('#E9EDF2')];
+      previewStrip.querySelectorAll('span').forEach((span, index) => { span.style.background = previewColors[index]; });
+      previewCount.textContent = selected.length ? `${selected.length} ${selected.length === 1 ? 'color' : 'colores'}` : 'sin colores';
+      previewSample.style.setProperty('--preview-accent', selected[0] || '#182230');
+      previewSample.style.background = selected[1] || '#f4f6f9';
+      previewAction.style.background = selected[0] || '#182230';
+      previewSample.style.color = selected[2] || '#182230';
+      contrastValue.textContent = selected.length ? `${contrastRatio(selected[0], '#FFFFFF')}:1` : '--';
+      document.getElementById('favoriteButton').textContent = selected.length && favorites.includes(selected.join(',')) ? '★ Guardada' : '☆ Guardar';
+      localStorage.setItem('coloria-selection', JSON.stringify(selected));
+      renderPalette();
+    }
+
+    function toggleColor(hex) {
+      if (selected.includes(hex)) {
+        selected = selected.filter((item) => item !== hex);
+      } else if (selected.length < 3) {
+        selected = [...selected, hex];
+      } else {
+        showToast('Solo puedes elegir 3 colores');
+        return;
+      }
+      renderSelected();
+    }
+
+    function addCustomColor() {
+      const hex = hexInput.value.trim().toUpperCase();
+      if (!/^#[0-9A-F]{6}$/.test(hex)) {
+        showToast('Escribe un código HEX válido');
+        return;
+      }
+      if (selected.length >= 3 && !selected.includes(hex)) {
+        showToast('Solo puedes elegir 3 colores');
+        return;
+      }
+      if (!selected.includes(hex)) selected = [...selected, hex];
+      renderSelected();
+      showToast('Color añadido a tu selección');
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    function formatColor(hex, format) {
+      const rgb = hexToRgb(hex); const hsl = hexToHsl(hex);
+      if (format === 'rgb') return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+      if (format === 'hsl') return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+      return hex;
+    }
+
+    function copyText(text, message) {
+      navigator.clipboard.writeText(text).then(() => showToast(message)).catch(() => showToast(text));
+    }
+
+    function generateHarmony() {
+      const source = selected[0] || '#FF5B45'; const base = hexToHsl(source);
+      const offsets = { complementary: [0, 180], analogous: [0, 30, 330], triadic: [0, 120, 240], monochrome: [0, 0, 0] }[harmonySelect.value];
+      const colors = offsets.map((offset, index) => hslToHex((base.h + offset) % 360, base.s, harmonySelect.value === 'monochrome' ? [base.l, Math.max(25, base.l - 18), Math.min(82, base.l + 18)][index] : base.l));
+      selected = [...new Set(colors)].slice(0, 3); renderSelected(); showToast('Armonía generada');
+    }
+
+    function saveFavorite() {
+      if (!selected.length) { showToast('Selecciona colores primero'); return; }
+      const key = selected.join(','); favorites = favorites.includes(key) ? favorites.filter((item) => item !== key) : [...favorites, key];
+      localStorage.setItem('coloria-favorites', JSON.stringify(favorites)); renderSelected(); showToast('Paleta guardada en favoritos');
+    }
+
+    function downloadCss() {
+      if (!selected.length) { showToast('Selecciona colores primero'); return; }
+      const css = `:root {\n${selected.map((hex, index) => `  --color-${index + 1}: ${hex};`).join('\n')}\n}`;
+      const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([css], { type: 'text/css' })); link.download = 'palette.css'; link.click(); URL.revokeObjectURL(link.href); showToast('CSS descargado');
+    }
+
+    paletteGrid.addEventListener('click', (event) => {
+      const swatch = event.target.closest('[data-hex]');
+      if (swatch) toggleColor(swatch.dataset.hex);
+    });
+    selectedList.addEventListener('click', (event) => {
+      const remove = event.target.closest('[data-remove]');
+      if (remove) toggleColor(remove.dataset.remove);
+    });
+    searchInput.addEventListener('input', renderPalette);
+    familyFilter.addEventListener('change', renderPalette);
+    document.getElementById('clearButton').addEventListener('click', () => { selected = []; renderSelected(); });
+    document.getElementById('copyButton').addEventListener('click', async () => {
+      if (!selected.length) { showToast('Selecciona al menos un color'); return; }
+      try { await navigator.clipboard.writeText(selected.join(', ')); showToast('Códigos copiados al portapapeles'); }
+      catch { showToast(selected.join(' · ')); }
+    });
+    document.getElementById('addButton').addEventListener('click', addCustomColor);
+    document.getElementById('generateButton').addEventListener('click', generateHarmony);
+    document.getElementById('favoriteButton').addEventListener('click', saveFavorite);
+    document.getElementById('downloadButton').addEventListener('click', downloadCss);
+    document.getElementById('copyFormatButton').addEventListener('click', () => {
+      if (!selected.length) { showToast('Selecciona colores primero'); return; }
+      const values = selected.map((hex, index) => formatSelect.value === 'css' ? `--color-${index + 1}: ${hex};` : formatColor(hex, formatSelect.value));
+      copyText(values.join('\n'), 'Formato copiado');
+    });
+    document.getElementById('themeButton').addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('coloria-theme', document.body.classList.contains('dark') ? 'dark' : 'light'); });
+    hexInput.addEventListener('input', () => { if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) colorInput.value = hexInput.value; });
+    colorInput.addEventListener('input', () => { hexInput.value = colorInput.value.toUpperCase(); });
+    hexInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') addCustomColor(); });
+
+    if (localStorage.getItem('coloria-theme') === 'dark') document.body.classList.add('dark');
+    renderSelected();
+  </script>
+</body>
+</html>
