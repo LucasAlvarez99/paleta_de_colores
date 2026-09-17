@@ -69,12 +69,24 @@
     .panel { background: var(--white); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
     .palette-panel { min-width: 0; overflow: hidden; }
     .toolbar { display: flex; align-items: center; gap: 14px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+    .toolbar-main { display: flex; align-items: center; gap: 14px; width: 100%; }
     .search-wrap { position: relative; flex: 1; }
     .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8993a1; pointer-events: none; }
     .search { width: 100%; padding: 12px 14px 12px 42px; background: #f8f9fb; border: 1px solid transparent; border-radius: 10px; color: var(--ink); outline: none; transition: .2s; }
     .search:focus { background: #fff; border-color: #cfd6e0; box-shadow: 0 0 0 4px #f0f2f6; }
     .filter { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
     select { padding: 11px 30px 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); outline: none; }
+    .filter-tools { display: grid; gap: 13px; width: 100%; padding-top: 15px; border-top: 1px solid var(--line); }
+    .quick-filters { display: flex; flex-wrap: wrap; gap: 7px; }
+    .quick-filter { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--muted); font-size: 10px; font-weight: 800; }
+    .quick-filter:hover, .quick-filter.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .range-filters { display: grid; grid-template-columns: 1fr 1fr auto; gap: 13px; align-items: center; }
+    .range-filter { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; color: var(--muted); font-size: 10px; font-weight: 800; }
+    .range-pair { display: grid; gap: 2px; }
+    .range-filter output { min-width: 30px; color: var(--ink); font-family: var(--mono); text-align: right; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .reset-filters { padding: 7px 9px; border: 0; background: transparent; color: var(--muted); font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .reset-filters:hover { color: var(--accent); }
     .palette-head { display: flex; justify-content: space-between; align-items: center; padding: 27px 24px 21px; }
     .palette-title { margin: 0; font-size: 17px; letter-spacing: -.03em; }
     .palette-note { margin: 0; color: var(--muted); font-size: 12px; }
@@ -138,6 +150,12 @@
     .button-primary:hover { background: #ed4d38; transform: translateY(-1px); }
     .button-ghost { border: 1px solid var(--line); background: #fff; color: var(--muted); }
     .button-ghost:hover { border-color: #c5ccd7; color: var(--ink); }
+    .save-note { margin-top: 16px; padding: 13px 14px; border: 1px solid rgba(255, 91, 69, .28); border-radius: 11px; background: var(--accent-soft); }
+    .save-note strong { display: block; color: var(--ink); font-size: 11px; }
+    .save-note p { margin: 4px 0 11px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .save-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .save-action { padding: 8px 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--ink); font-size: 10px; font-weight: 800; }
+    .save-action:hover { border-color: var(--accent); color: var(--accent); }
     .custom-panel { padding: 22px 24px; }
     .custom-panel h3 { margin: 0 0 5px; font-size: 14px; }
     .custom-panel p { margin: 0 0 16px; color: var(--muted); font-size: 11px; line-height: 1.5; }
@@ -168,6 +186,9 @@
       h1 { font-size: 49px; }
       .hero-copy { font-size: 14px; }
       .toolbar { align-items: stretch; flex-direction: column; padding: 16px; }
+      .toolbar-main { align-items: stretch; flex-direction: column; }
+      .range-filters { grid-template-columns: 1fr; gap: 8px; }
+      .range-filter { grid-template-columns: 70px 1fr 34px; }
       .filter { justify-content: space-between; }
       .palette-head { align-items: flex-start; flex-direction: column; gap: 5px; padding: 21px 16px 17px; }
       .palette-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 0 16px 18px; }
@@ -191,19 +212,35 @@
         <h1>El color que tu proyecto estaba buscando.</h1>
         <p class="hero-copy">Explora matices, encuentra contrastes y llévate hasta tres colores listos para usar. Haz clic en cualquier muestra para construir tu paleta.</p>
       </div>
-      <div class="hero-badge"><span class="pulse"></span> 324 colores disponibles</div>
+      <div class="hero-badge"><span class="pulse"></span> <span id="paletteTotal">colores disponibles</span></div>
     </section>
 
     <section class="workspace">
       <div class="panel palette-panel">
         <div class="toolbar">
-          <label class="search-wrap">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-            <input id="search" class="search" type="search" placeholder="Busca un color o código HEX..." autocomplete="off">
-          </label>
-          <label class="filter">Mostrar <select id="familyFilter"><option value="all">Todos los colores</option><option value="warm">Cálidos</option><option value="cool">Fríos</option><option value="neutral">Neutros</option></select></label>
+          <div class="toolbar-main">
+            <label class="search-wrap">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+              <input id="search" class="search" type="search" placeholder="Busca un color o código HEX..." autocomplete="off">
+            </label>
+            <label class="filter">Familia <select id="familyFilter"><option value="all">Todas</option><option value="warm">Cálidos</option><option value="cool">Fríos</option><option value="neutral">Neutros</option></select></label>
+          </div>
+          <div class="filter-tools">
+            <div class="quick-filters" aria-label="Filtros rápidos">
+              <button class="quick-filter active" type="button" data-quick-filter="all">Todos</button>
+              <button class="quick-filter" type="button" data-quick-filter="pastel">Pasteles</button>
+              <button class="quick-filter" type="button" data-quick-filter="dark">Oscuros</button>
+              <button class="quick-filter" type="button" data-quick-filter="vivid">Intensos</button>
+              <button class="quick-filter" type="button" data-quick-filter="selected">Seleccionados</button>
+            </div>
+            <div class="range-filters">
+              <label class="range-filter">Luminosidad <span class="range-pair"><input id="lightMin" type="range" min="0" max="100" value="0"><input id="lightMax" type="range" min="0" max="100" value="100"></span><output id="lightValue">0–100</output></label>
+              <label class="range-filter">Saturación <span class="range-pair"><input id="saturationMin" type="range" min="0" max="100" value="0"><input id="saturationMax" type="range" min="0" max="100" value="100"></span><output id="saturationValue">0–100</output></label>
+              <button id="resetFilters" class="reset-filters" type="button">Limpiar filtros</button>
+            </div>
+          </div>
         </div>
-        <div class="palette-head"><h2 class="palette-title">Espectro completo</h2><p class="palette-note" id="resultCount">324 muestras · haz clic para seleccionar</p></div>
+        <div class="palette-head"><h2 class="palette-title">Espectro completo</h2><p class="palette-note" id="resultCount">576 muestras · haz clic para seleccionar</p></div>
         <div id="paletteGrid" class="palette-grid" aria-live="polite"></div>
       </div>
 
@@ -218,6 +255,7 @@
             <div id="previewSample" class="preview-sample"><div class="preview-nav"><span><i></i> coloría</span><button id="previewAction" class="preview-action" type="button">Acción</button></div><div class="preview-copy"><strong>Diseña con intención</strong><small>Una muestra rápida de tu combinación.</small></div></div>
           </div>
           <div class="actions"><button id="copyButton" class="button button-primary" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar códigos</button><button id="clearButton" class="button button-ghost" type="button" aria-label="Limpiar selección">Limpiar</button></div>
+            <div class="save-note"><strong>¿Te encanta? No la pierdas.</strong><p>Haz una captura de esta ficha o guarda un kit con todos los datos listos para compartir.</p><div class="save-actions"><button id="captureButton" class="save-action" type="button">▣ Capturar PNG</button><button id="saveKitButton" class="save-action" type="button">↓ Guardar kit</button></div></div>
         </div>
         <div class="panel custom-panel">
           <h3>¿Tienes un color en mente?</h3>
@@ -253,7 +291,12 @@
     const toast = document.getElementById('toast');
     const colorInput = document.getElementById('colorInput');
     const hexInput = document.getElementById('hexInput');
-    let selected = JSON.parse(localStorage.getItem('coloria-selection') || '[]');
+    const lightMin = document.getElementById('lightMin');
+    const lightMax = document.getElementById('lightMax');
+    const saturationMin = document.getElementById('saturationMin');
+    const saturationMax = document.getElementById('saturationMax');
+    let quickFilter = 'all';
+    let selected = [...new Set(JSON.parse(localStorage.getItem('coloria-selection') || '[]'))].slice(0, 3);
     let favorites = JSON.parse(localStorage.getItem('coloria-favorites') || '[]');
     let toastTimer;
 
@@ -265,16 +308,26 @@
     };
 
     function makePalette() {
-      const colors = [];
-      const hues = Array.from({ length: 36 }, (_, index) => index * 10);
-      const lightness = [24, 32, 40, 48, 56, 64, 72, 82, 92];
+      const colors = new Map();
+      const distinctColors = [];
+      const hues = Array.from({ length: 48 }, (_, index) => index * 7.5);
+      const lightness = [18, 26, 34, 42, 50, 58, 66, 74, 82, 88, 92, 96];
       hues.forEach((hue) => lightness.forEach((light, shadeIndex) => {
-        const saturation = light >= 82 ? 70 : 76;
+        const saturation = light >= 82 ? 68 : 78;
         const hex = hslToHex(hue, saturation, light);
         const nameHue = (Math.round(hue / 15) * 15) % 360;
-        colors.push({ hex, hue, light, family: getFamily(hue, light), name: `${names[nameHue]} ${shadeIndex + 1}` });
+        if (!colors.has(hex) && distinctColors.every((color) => colorDistance(color.hex, hex) >= 22)) {
+          const color = { hex, hue, light, family: getFamily(hue, light), name: `${names[nameHue]} ${shadeIndex + 1}` };
+          colors.set(hex, color);
+          distinctColors.push(color);
+        }
       }));
-      return colors;
+      return [...colors.values()];
+    }
+
+    function colorDistance(first, second) {
+      const firstRgb = hexToRgb(first); const secondRgb = hexToRgb(second);
+      return Math.sqrt(['r', 'g', 'b'].reduce((total, channel) => total + (firstRgb[channel] - secondRgb[channel]) ** 2, 0));
     }
 
     function getFamily(hue, light) {
@@ -312,13 +365,26 @@
     }
 
     const palette = makePalette();
+    document.getElementById('paletteTotal').textContent = `${palette.length} colores distinguibles`;
 
     function renderPalette() {
       const query = searchInput.value.trim().toLowerCase();
       const family = familyFilter.value;
+      const lightLow = Math.min(Number(lightMin.value), Number(lightMax.value));
+      const lightHigh = Math.max(Number(lightMin.value), Number(lightMax.value));
+      const saturationLow = Math.min(Number(saturationMin.value), Number(saturationMax.value));
+      const saturationHigh = Math.max(Number(saturationMin.value), Number(saturationMax.value));
+      document.getElementById('lightValue').textContent = `${lightLow}–${lightHigh}`;
+      document.getElementById('saturationValue').textContent = `${saturationLow}–${saturationHigh}`;
       const matches = palette.filter((color) => {
+        const hsl = hexToHsl(color.hex);
         const textMatch = !query || color.name.toLowerCase().includes(query) || color.hex.toLowerCase().includes(query);
-        return textMatch && (family === 'all' || color.family === family);
+        const quickMatch = quickFilter === 'all'
+          || (quickFilter === 'pastel' && hsl.l >= 66 && hsl.s >= 30)
+          || (quickFilter === 'dark' && hsl.l < 35)
+          || (quickFilter === 'vivid' && hsl.s >= 70 && hsl.l >= 25 && hsl.l <= 75)
+          || (quickFilter === 'selected' && selected.includes(color.hex));
+        return textMatch && (family === 'all' || color.family === family) && quickMatch && hsl.l >= lightLow && hsl.l <= lightHigh && hsl.s >= saturationLow && hsl.s <= saturationHigh;
       });
       paletteGrid.innerHTML = matches.length ? matches.map((color, index) => `
         <button class="swatch ${selected.includes(color.hex) ? 'selected' : ''}" style="animation-delay: ${Math.min(index, 20) * 18}ms" data-hex="${color.hex}" type="button" aria-label="Seleccionar ${color.name}, ${color.hex}">
@@ -411,6 +477,46 @@
       const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([css], { type: 'text/css' })); link.download = 'palette.css'; link.click(); URL.revokeObjectURL(link.href); showToast('CSS descargado');
     }
 
+    function downloadFile(content, filename, type) {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([content], { type }));
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function saveKit() {
+      if (!selected.length) { showToast('Selecciona colores primero'); return; }
+      const kit = {
+        app: 'Coloría',
+        createdAt: new Date().toISOString(),
+        colors: selected.map((hex, index) => ({ name: `color-${index + 1}`, hex, rgb: formatColor(hex, 'rgb'), hsl: formatColor(hex, 'hsl') })),
+        css: `:root {\n${selected.map((hex, index) => `  --color-${index + 1}: ${hex};`).join('\n')}\n}`
+      };
+      downloadFile(JSON.stringify(kit, null, 2), 'coloria-kit.json', 'application/json');
+      showToast('Kit guardado como JSON');
+    }
+
+    function capturePalette() {
+      if (!selected.length) { showToast('Selecciona colores primero'); return; }
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200; canvas.height = 720;
+      const context = canvas.getContext('2d');
+      context.fillStyle = '#F5F7FB'; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = '#182230'; context.font = '800 52px Manrope, sans-serif'; context.fillText('coloría', 72, 104);
+      context.fillStyle = '#6D7888'; context.font = '24px Manrope, sans-serif'; context.fillText('Mi paleta · guardada desde Coloría', 74, 146);
+      const width = (canvas.width - 144 - (selected.length - 1) * 18) / selected.length;
+      selected.forEach((hex, index) => {
+        const x = 72 + index * (width + 18);
+        context.fillStyle = hex; context.fillRect(x, 210, width, 300);
+        context.fillStyle = '#182230'; context.font = '700 25px DM Mono, monospace'; context.fillText(hex, x, 558);
+        context.fillStyle = '#6D7888'; context.font = '20px Manrope, sans-serif'; context.fillText(`color-${index + 1}`, x, 596);
+      });
+      context.fillStyle = '#6D7888'; context.font = '18px Manrope, sans-serif'; context.fillText('Guarda esta imagen para volver a encontrar tu combinación.', 72, 666);
+      const link = document.createElement('a'); link.download = 'coloria-paleta.png'; link.href = canvas.toDataURL('image/png'); link.click();
+      showToast('Captura PNG descargada');
+    }
+
     paletteGrid.addEventListener('click', (event) => {
       const swatch = event.target.closest('[data-hex]');
       if (swatch) toggleColor(swatch.dataset.hex);
@@ -421,6 +527,18 @@
     });
     searchInput.addEventListener('input', renderPalette);
     familyFilter.addEventListener('change', renderPalette);
+    document.querySelectorAll('[data-quick-filter]').forEach((button) => button.addEventListener('click', () => {
+      quickFilter = button.dataset.quickFilter;
+      document.querySelectorAll('[data-quick-filter]').forEach((item) => item.classList.toggle('active', item === button));
+      renderPalette();
+    }));
+    [lightMin, lightMax, saturationMin, saturationMax].forEach((input) => input.addEventListener('input', renderPalette));
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      searchInput.value = ''; familyFilter.value = 'all'; quickFilter = 'all';
+      lightMin.value = 0; lightMax.value = 100; saturationMin.value = 0; saturationMax.value = 100;
+      document.querySelectorAll('[data-quick-filter]').forEach((item) => item.classList.toggle('active', item.dataset.quickFilter === 'all'));
+      renderPalette();
+    });
     document.getElementById('clearButton').addEventListener('click', () => { selected = []; renderSelected(); });
     document.getElementById('copyButton').addEventListener('click', async () => {
       if (!selected.length) { showToast('Selecciona al menos un color'); return; }
@@ -431,6 +549,8 @@
     document.getElementById('generateButton').addEventListener('click', generateHarmony);
     document.getElementById('favoriteButton').addEventListener('click', saveFavorite);
     document.getElementById('downloadButton').addEventListener('click', downloadCss);
+    document.getElementById('captureButton').addEventListener('click', capturePalette);
+    document.getElementById('saveKitButton').addEventListener('click', saveKit);
     document.getElementById('copyFormatButton').addEventListener('click', () => {
       if (!selected.length) { showToast('Selecciona colores primero'); return; }
       const values = selected.map((hex, index) => formatSelect.value === 'css' ? `--color-${index + 1}: ${hex};` : formatColor(hex, formatSelect.value));
